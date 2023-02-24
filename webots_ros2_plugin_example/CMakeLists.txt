@@ -3,6 +3,7 @@ project(webots_ros2_plugin_example)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
+  set(CMAKE_CXX_STANDARD 14)
 endif()
 
 # find dependencies
@@ -13,16 +14,37 @@ find_package(geometry_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(webots_ros2_driver REQUIRED)
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # comment the line when a copyright and license is added to all source files
-  set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
+# Export the plugin configuration file
+pluginlib_export_plugin_description_file(webots_ros2_driver urdf/webots_ros2_plugin_example.xml)
 
+# The rest is standard ROS 2 packaging description
+add_library(
+  ${PROJECT_NAME}
+  SHARED
+  src/WebotsRos2PluginExample.cpp
+)
+
+target_include_directories(
+  ${PROJECT_NAME}
+  PRIVATE
+  include
+)
+ament_target_dependencies(
+  ${PROJECT_NAME}
+  pluginlib
+  rclcpp
+  webots_ros2_driver
+)
+install(TARGETS
+  ${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+ament_export_include_directories(
+  include
+)
+ament_export_libraries(
+  ${PROJECT_NAME}
+)
 ament_package()
