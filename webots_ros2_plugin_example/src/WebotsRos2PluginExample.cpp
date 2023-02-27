@@ -35,7 +35,7 @@ namespace webots_ros2_plugin_example
     
     cmd_vel_subscription_ = node->create_subscription<geometry_msgs::msg::TwistStamped>("/cmd_vel_plugin",
                                                                                        rclcpp::SensorDataQoS().reliable(),
-                                                                                       std::bind(&MyRobotDriverPlugin::cmd_vel_callback, 
+                                                                                       std::bind(&WebotsRos2PluginExample::cmd_vel_callback, 
                                                                                        this, _1));
 
   }
