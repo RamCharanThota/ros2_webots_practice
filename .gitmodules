@@ -1,0 +1,3 @@
+[submodule "wrestling-bob-ros-2"]
+	path = wrestling-bob-ros-2
+	url = https://github.com/cyberbotics/wrestling-bob-ros-2.git
