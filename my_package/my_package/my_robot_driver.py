@@ -10,7 +10,7 @@ class MyRobotDriver:
         self.__robot=webots_node.robot
         
         '''
-        left motor and right motor
+        left motor and right motor added
         '''
         self.__left_motor = self.__robot.getDevice('left wheel motor')
         self.__right_motor = self.__robot.getDevice('right wheel motor')
