@@ -1,45 +1,55 @@
 import rclpy
 
-from geometry_msgs.msg import Twist
+# This is a workaround so that Webots' Python controller classes can be used
+# in this case, we need it to import MotionLibrary which needs the Motion class
+import os
+from ament_index_python.packages import get_package_prefix
+os.environ['WEBOTS_HOME'] = get_package_prefix('webots_ros2_driver')
+from utils.motion_library import MotionLibrary
 
-HALF_DISTANCE_BETWEEN_WHEELS=0.045
-WHEEL_RADIUS=0.025
+# imu topic message lib
+from rclpy.node import Node
+from sensor_msgs.msg import Imu
 
-class MyRobotDriver:
-    def init(self,webots_node,properties):
-        self.__robot=webots_node.robot
-        
-        '''
-        left motor and right motor added
-        '''
-        self.__left_motor = self.__robot.getDevice('left wheel motor')
-        self.__right_motor = self.__robot.getDevice('right wheel motor')
+class NaoDriver:
+    def init(self, webots_node, properties):
+        # we get the robot instance from the webots_node
+        self.__robot = webots_node.robot
+        # to load all the motions from the motion folder, we use the Motion_library class:
+        self.__library = MotionLibrary()
 
-        self.__left_motor.setPosition(float('inf'))
-        self.__left_motor.setVelocity(0)
+        # we initialize the shoulder pitch motors using the Robot.getDevice() function:
+        self.__RShoulderPitch = self.__robot.getDevice("RShoulderPitch")
+        self.__LShoulderPitch = self.__robot.getDevice("LShoulderPitch")
 
-        self.__right_motor.setPosition(float('inf'))
-        self.__right_motor.setVelocity(0)
+        # to control a motor, we use the setPosition() function:
+        self.__RShoulderPitch.setPosition(1.3)
+        self.__LShoulderPitch.setPosition(1.3)
+        # for more motor control functions, see the documentation: https://cyberbotics.com/doc/reference/motor
+        # to see the list of available devices, see the NAO documentation: https://cyberbotics.com/doc/guide/nao
 
-        self.__target_twist = Twist()
+        # adding a custom motion
+        self.__library.add('Shove','/home/ram/projects/cyberbots_ws/src/rcbot_cyberbotics_controller/controllers/motions/Shove.motion',loop=True)
+
+        # we add a variable to wait for the robot to stabilise
+        self.wait = True
 
         rclpy.init(args=None)
-        self.__node = rclpy.create_node('my_robot_driver')
-        self.__node.create_subscription(Twist, 'cmd_vel', self.__cmd_vel_callback, 1)
+        self.__node = rclpy.create_node('nao_driver')
+        self.__library.play('Stand')
 
-    def __cmd_vel_callback(self, twist):
-        self.__target_twist = twist
+        #subscribing to imu topic 
+        self.__imu_sub =self.__node.create_subscription(Imu,'IMU',self.imuCallback,10)
+        self.__imu_sub # prevent unused warniings
+        self.__fall_detect=False
     
+    def imuCallback(self,msg): # use to detect fall
+         print("acceleration x : ",msg.linear_acceleration.x)
+         
+
     def step(self):
+        # Mandatory function to go to the next simulation step
         rclpy.spin_once(self.__node, timeout_sec=0)
-
-        forward_speed = self.__target_twist.linear.x
-        angular_speed = self.__target_twist.angular.z
-
-        command_motor_left = (forward_speed - angular_speed * HALF_DISTANCE_BETWEEN_WHEELS) / WHEEL_RADIUS
-        command_motor_right = (forward_speed + angular_speed * HALF_DISTANCE_BETWEEN_WHEELS) / WHEEL_RADIUS
-
-        self.__left_motor.setVelocity(command_motor_left)
-        self.__right_motor.setVelocity(command_motor_right)
-
-    
+        if self.__library.get('Stand').isOver():
+                self.__library.play('ForwardLoop')  # walk forward
+                self.__library.play('Shove')     
